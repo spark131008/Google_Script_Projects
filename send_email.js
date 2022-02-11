@@ -5,14 +5,14 @@ function record_data() {
   try {
     // select the 'responses' sheet by default
     var doc = SpreadsheetApp.getActiveSpreadsheet();
-    var sheetName = "2021";
+    var sheetName = "2022";
     var sheet = doc.getSheetByName(sheetName);
     var date = new Date();
     var today_date =
       date.getMonth() + 1 + "-" + date.getDate() + "-" + date.getFullYear();
     var today_minus_fifteen_days = new Date(
-      date.getTime() - 15 * 24 * 60 * 60 * 1000
-    ); // notify me 15 days prior
+      date.getTime() - 20 * 24 * 60 * 60 * 1000
+    ); // notify me 20 days prior
     var today_minus_fifteen_days_formatted =
       today_minus_fifteen_days.getMonth() +
       1 +
@@ -23,29 +23,68 @@ function record_data() {
     // Logger.log(today_minus_fifteen_days_formatted)
 
     var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    // Logger.log(header)
     var exp_date_index = header.indexOf("Service Exp. Date");
+    var six_month_check_point_index = header.indexOf("6-month check point");
+    // Logger.log(exp_date_index)
+    // Logger.log(six_month_check_point_index)
     var rows = sheet
       .getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn())
       .getValues();
     // Logger.log(rows)
 
+    var email_to_be_sent_list = [];
     for (var i = 0; i < rows.length; i++) {
-      // start at 1 to avoid Timestamp column
       var row = rows[i];
-      // Logger.log(row)
-      var row_date =
-        row[exp_date_index].getMonth() +
-        1 +
-        "-" +
-        row[exp_date_index].getDate() +
-        "-" +
-        row[exp_date_index].getFullYear();
-      Logger.log(row_date);
-      if (row_date === today_minus_fifteen_days_formatted) {
-        // Logger.log(row)
-        return [header, row];
+      var exp_date = "";
+      var check_point_date = "";
+      if (String(row[exp_date_index]).includes("n/a")) {
+      } else {
+        exp_date =
+          row[exp_date_index].getMonth() +
+          1 +
+          "-" +
+          row[exp_date_index].getDate() +
+          "-" +
+          row[exp_date_index].getFullYear();
+
+        // Reformatting the Service Exp. Date into MM-DD-YYYY to make it more readable
+        row[exp_date_index] = exp_date;
+      }
+      if (String(row[six_month_check_point_index]).includes("n/a")) {
+      } else {
+        check_point_date =
+          row[six_month_check_point_index].getMonth() +
+          1 +
+          "-" +
+          row[six_month_check_point_index].getDate() +
+          "-" +
+          row[six_month_check_point_index].getFullYear();
+
+        // Reformatting the 6-month Check Point into MM-DD-YYYY to make it more readable
+        row[six_month_check_point_index] = check_point_date;
+      }
+      // Logger.log(exp_date)
+      // Logger.log(check_point_date)
+      if (
+        exp_date === today_minus_fifteen_days_formatted ||
+        check_point_date === today_minus_fifteen_days_formatted
+      ) {
+        // Reformatting the Service Start Date into MM-DD-YYYY to make it more readable
+        row[header.indexOf("Service Start Date")] =
+          row[header.indexOf("Service Start Date")].getMonth() +
+          1 +
+          "-" +
+          row[header.indexOf("Service Start Date")].getDate() +
+          "-" +
+          row[header.indexOf("Service Start Date")].getFullYear();
+
+        // Adding records to the list - only records that the conditions are met
+        email_to_be_sent_list.push([header, row]);
       }
     }
+    Logger.log(email_to_be_sent_list);
+    return email_to_be_sent_list;
   } catch (error) {
     Logger.log(error);
   }
@@ -53,27 +92,31 @@ function record_data() {
 
 function doPost() {
   try {
-    var res = record_data();
+    var records = record_data();
 
-    if (res) {
-      Logger.log("Some emails to send");
-      var mail_fields = res[0];
-      var mail_body = res[1];
-      var zipped_content = mail_fields.map((value, index) => [
-        value,
-        mail_body[index],
-      ]);
-      var formatted_content = formatMailBody(zipped_content);
-      Logger.log(zipped_content);
+    if (records) {
+      var numb_of_emails = records.length;
+      Logger.log(String(numb_of_emails) + " email(s) to send!");
+      for (var i = 0; i < numb_of_emails; i++) {
+        var res = records[i];
+        var mail_fields = res[0];
+        var mail_body = res[1];
+        var zipped_content = mail_fields.map((value, index) => [
+          value,
+          mail_body[index],
+        ]);
+        var formatted_content = formatMailBody(zipped_content);
+        Logger.log(zipped_content);
 
-      // send email if to address is set
-      if (TO_ADDRESS) {
-        MailApp.sendEmail({
-          to: String(TO_ADDRESS),
-          subject: "TV Registration Renewal Alert",
-          // replyTo: String(mailData.email), // This is optional and reliant on your form actually collecting a field named `email`
-          htmlBody: formatted_content,
-        });
+        // send email if to address is set
+        if (TO_ADDRESS) {
+          MailApp.sendEmail({
+            to: String(TO_ADDRESS),
+            subject: "TV Registration Renewal Alert",
+            // replyTo: String(mailData.email), // This is optional and reliant on your form actually collecting a field named `email`
+            htmlBody: formatted_content,
+          });
+        }
       }
     } else {
       Logger.log("No emails to send");
