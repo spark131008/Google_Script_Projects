@@ -7,14 +7,14 @@ var sheetNames = [String(parseInt(curr_year)-1), curr_year, String(parseInt(curr
 
 function doPost() {
   try {
-    for (var i = 0; i < sheetNames.length; i++){
+    for (let i = 0; i < sheetNames.length; i++){
       var records = record_data(sheetNames[i])
       var numb_of_emails = records.length
 
       if (numb_of_emails > 0){
         Logger.log(String(numb_of_emails) + " email(s) to send!")
-        for (var i = 0; i < numb_of_emails; i++){
-          var res = records[i]
+        for (let j = 0; j < numb_of_emails; j++){
+          var res = records[j]
           var mail_fields = res[0];
           var mail_body = res[1];
           var zipped_content = mail_fields.map((value, index) => [value, mail_body[index]])
@@ -46,7 +46,7 @@ function doPost() {
     return ContentService
           .createTextOutput(JSON.stringify({"result":"error", "error": error}))
           .setMimeType(ContentService.MimeType.JSON);
-  }
+    }
 }
 
 function record_data(sheetName) {
