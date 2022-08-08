@@ -1,14 +1,17 @@
 // if you want to store your email server-side (hidden), uncomment the next line
 var TO_ADDRESS = "info.skypick@gmail.com";
-var sheetNames = ["2022", "2023"];
+var curr_year = String(new Date().getFullYear())
+
+// Making sheetNames dynamic: Always check current year, pervious year, next year
+var sheetNames = [String(parseInt(curr_year)-1), curr_year, String(parseInt(curr_year)+1)];
 
 function doPost() {
   try {
     for (var i = 0; i < sheetNames.length; i++){
       var records = record_data(sheetNames[i])
+      var numb_of_emails = records.length
 
-      if (records){
-        var numb_of_emails = records.length
+      if (numb_of_emails > 0){
         Logger.log(String(numb_of_emails) + " email(s) to send!")
         for (var i = 0; i < numb_of_emails; i++){
           var res = records[i]
@@ -32,12 +35,12 @@ function doPost() {
       else {
         Logger.log("No emails to send")
       }
-      return ContentService    // return json success results
-          .createTextOutput(
-              JSON.stringify({"result":"success",
-                "data": "Sent Successfully" }))
-          .setMimeType(ContentService.MimeType.JSON);
     }
+    return ContentService    // return json success results
+        .createTextOutput(
+            JSON.stringify({"result":"success",
+              "data": "Sent Successfully" }))
+        .setMimeType(ContentService.MimeType.JSON);
   } catch(error) { // if error return this
     Logger.log(error);
     return ContentService
@@ -48,10 +51,13 @@ function doPost() {
 
 function record_data(sheetName) {
   try {
+    Logger.log("sheetName:")
+    Logger.log(sheetName)
     // select the 'responses' sheet by default
     var doc = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = doc.getSheetByName(sheetName);
-    var date = new Date();
+    if (sheet != null){
+      var date = new Date();
     var today_date =
       date.getMonth() + 1 + "-" + date.getDate() + "-" + date.getFullYear();
     var today_plus_fifteen_days = new Date(date.getTime() + 15 * 24 * 60 * 60 *1000); // notify me 15 days prior
@@ -62,12 +68,12 @@ function record_data(sheetName) {
       today_plus_fifteen_days.getDate() +
       "-" +
       today_plus_fifteen_days.getFullYear();
-    
+
     Logger.log("Today's Date:")
     Logger.log(today_date)
     Logger.log("Date to Check:")
     Logger.log(today_plus_fifteen_days_formatted)
-    
+
 
     var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     // Logger.log(header)
@@ -124,6 +130,10 @@ function record_data(sheetName) {
     }
     Logger.log(email_to_be_sent_list)
     return email_to_be_sent_list
+    }else{
+      Logger.log("No such sheet name is found.")
+      return []
+    }
   } catch (error) {
     Logger.log(error);
   }
