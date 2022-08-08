@@ -1,11 +1,55 @@
 // if you want to store your email server-side (hidden), uncomment the next line
 var TO_ADDRESS = "info.skypick@gmail.com";
+var sheetNames = ["2022", "2023"];
 
-function record_data() {
+function doPost() {
+  try {
+    for (var i = 0; i < sheetNames.length; i++){
+      var records = record_data(sheetNames[i])
+
+      if (records){
+        var numb_of_emails = records.length
+        Logger.log(String(numb_of_emails) + " email(s) to send!")
+        for (var i = 0; i < numb_of_emails; i++){
+          var res = records[i]
+          var mail_fields = res[0];
+          var mail_body = res[1];
+          var zipped_content = mail_fields.map((value, index) => [value, mail_body[index]])
+          var formatted_content = formatMailBody(zipped_content)
+          Logger.log(zipped_content)
+
+          // send email if to address is set
+          if (TO_ADDRESS) {
+            MailApp.sendEmail({
+              to: String(TO_ADDRESS),
+              subject: "TV Registration Renewal Alert",
+              // replyTo: String(mailData.email), // This is optional and reliant on your form actually collecting a field named `email`
+              htmlBody: formatted_content
+            });
+          }
+        }
+      }
+      else {
+        Logger.log("No emails to send")
+      }
+      return ContentService    // return json success results
+          .createTextOutput(
+              JSON.stringify({"result":"success",
+                "data": "Sent Successfully" }))
+          .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch(error) { // if error return this
+    Logger.log(error);
+    return ContentService
+          .createTextOutput(JSON.stringify({"result":"error", "error": error}))
+          .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function record_data(sheetName) {
   try {
     // select the 'responses' sheet by default
     var doc = SpreadsheetApp.getActiveSpreadsheet();
-    var sheetName = "2022";
     var sheet = doc.getSheetByName(sheetName);
     var date = new Date();
     var today_date =
@@ -28,7 +72,7 @@ function record_data() {
     var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     // Logger.log(header)
     var exp_date_index = header.indexOf("Service Exp. Date");
-    var six_month_check_point_index = header.indexOf("6-month check point");
+    var six_month_check_point_index = header.indexOf("Check Point");
     // Logger.log(exp_date_index)
     // Logger.log(six_month_check_point_index)
     var rows = sheet
@@ -82,48 +126,6 @@ function record_data() {
     return email_to_be_sent_list
   } catch (error) {
     Logger.log(error);
-  }
-}
-
-function doPost() {
-  try {
-    var records = record_data()
-
-    if (records){
-      var numb_of_emails = records.length
-      Logger.log(String(numb_of_emails) + " email(s) to send!")
-      for (var i = 0; i < numb_of_emails; i++){
-        var res = records[i]
-        var mail_fields = res[0];
-        var mail_body = res[1];
-        var zipped_content = mail_fields.map((value, index) => [value, mail_body[index]])
-        var formatted_content = formatMailBody(zipped_content)
-        Logger.log(zipped_content)
-
-        // send email if to address is set
-        if (TO_ADDRESS) {
-          MailApp.sendEmail({
-          to: String(TO_ADDRESS),
-          subject: "TV Registration Renewal Alert",
-          // replyTo: String(mailData.email), // This is optional and reliant on your form actually collecting a field named `email`
-          htmlBody: formatted_content
-          }); 
-        }
-      }
-    }
-    else {
-      Logger.log("No emails to send")
-    }
-    return ContentService    // return json success results
-          .createTextOutput(
-            JSON.stringify({"result":"success",
-                            "data": "Sent Successfully" }))
-          .setMimeType(ContentService.MimeType.JSON);
-  } catch(error) { // if error return this
-    Logger.log(error);
-    return ContentService
-          .createTextOutput(JSON.stringify({"result":"error", "error": error}))
-          .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
